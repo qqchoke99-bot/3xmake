@@ -1,1 +1,56 @@
+name: Build sound-physics-bedrock (Windows client)
 
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-client:
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+
+      - name: Cache xmake packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            \~/AppData/Local/.xmake
+          key: xmake-\( {{ runner.os }}- \){{ hashFiles('xmake.lua') }}
+          restore-keys: |
+            xmake-${{ runner.os }}-
+
+      - name: Update xmake repos
+        run: xmake repo -u
+        shell: bash
+
+      # target_type=client ตาม README ของแพ็กนี้
+      - name: Configure (Windows x64 Release, client)
+        run: |
+          xmake f -a x64 -m release -p windows -v --target_type=client -y
+        shell: bash
+
+      - name: Build
+        run: xmake -v -y
+        shell: bash
+
+      - name: List output
+        run: |
+          echo "== bin tree =="
+          find bin -type f 2>/dev/null || dir /s bin
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sound-physics-bedrock-client-windows-x64
+          path: |
+            bin/
+          if-no-files-found: error
